@@ -8,49 +8,72 @@
   var Game = function() {
     var screen = document.getElementById("screen").getContext('2d');
     this.size = { x: screen.canvas.width, y: screen.canvas.height };
-    console.log(this.size.x)
-    console.log(this.size.y)
     this.center = { x: this.size.x / 2, y: this.size.y / 2 };
 
     this.boundary_thickness = 10;
     this.boundary = new Boundary(this);
-    this.sprites = [new Head(this)]
+    this.boundary.draw();
+    this.snake = new Snake(new Head(this));
+    this.food = new Food(this);
+    // this.sprites = [new Head(this), new Food(this)]
     // this.collidables = [this.head, this.boundary.topbound, this.boundary.bottombound];
 
     var self = this;
-    var tick = function() {
-      self.update();
-      self.draw(screen);
+    self.highrestimestamp = 0;
+    self.redraw_freq = 80;
+    var tick = function(timestamp) {
+      if (timestamp === undefined) {
+        self.update();
+        self.draw(screen);
+      } else if (timestamp - self.highrestimestamp > self.redraw_freq) {
+        self.update();
+        self.draw(screen);
+        self.highrestimestamp = timestamp;
+      };
+
       requestAnimationFrame(tick);
     };
 
     tick();
+    // setInterval(function() {
+    //   self.update();
+    //   self.draw(screen);
+    // }, 50);
   };
 
   Game.prototype = {
     update: function() {
-      reportCollisions(this.sprites, this.boundary);
-
-      for (i = 0; i < this.sprites.length; i++) {
-        this.sprites[i].update();
+      // reportCollisions(this.foods, this.snake);
+      if (this.snake.alive) {
+        reportCollisions([this.snake.head], [this.boundary.topbound]);
+        reportCollisions([this.snake.head], [this.boundary.bottombound]);
+        reportCollisions([this.snake.head], [this.boundary.leftbound]);
+        reportCollisions([this.snake.head], [this.boundary.rightbound]);
+        reportCollisions([this.snake.head], [this.food]);
+  
+        this.snake.update();
       }
     },
 
     draw: function(screen) {
-      screen.clearRect(0, 0, this.size.x, this.size.y);
-      this.boundary.draw(screen);
-
-      for (i = 0; i < this.sprites.length; i++) {
-        this.sprites[i].draw(screen);
-      }
+      // if (this.tick_num % this.redraw_rate == 0) {
+        screen.clearRect(this.boundary_thickness, this.boundary_thickness, this.size.x - this.boundary_thickness*2, this.size.y - this.boundary_thickness*2);
+        if (this.snake.alive) {
+          this.snake.head.draw(screen);
+          // for (i = 0; i < this.snake.tail.leng
+          this.food.draw(screen);
+        };
+      // };
     },
 
-    removeSprite: function(sprite) {
-      var spriteIndex = this.sprites.indexOf(sprite);
-      this.sprites.splice(spriteIndex, 1);
-      if (spriteIndex === 0) {
-        this.boundary.color = 'red';
-      }
+    regenFood: function() {
+      // TODO
+    },
+
+    killSnake: function() {
+      this.snake.alive = false;
+      this.boundary.color = 'red';
+      this.boundary.draw();
     }
   }
 
@@ -59,25 +82,31 @@
   // Game boundaries
   // ========
 
+  var Bound = function(center, size) {
+    this.center = center;
+    this.size = size;
+  };
+
   var Boundary = function(game) {
     this.game = game;
+    this.screen = document.getElementById("screen").getContext('2d');
     this.color = "black";
-    this.topbound = {
-      center: { x: game.center.x, y: game.boundary_thickness / 2 },
-      size: { x: game.size.x, y: game.boundary_thickness }
-    };
-    this.bottombound = {
-      center: { x: game.center.x, y: game.size.y - game.boundary_thickness / 2 },
-      size: { x: game.size.x, y: game.boundary_thickness }
-    };
-    this.leftbound = {
-      center: { x: game.boundary_thickness / 2, y: game.center.y },
-      size: { x: game.boundary_thickness, y: game.size.y }
-    };
-    this.rightbound = {
-      center: { x: game.size.x - game.boundary_thickness / 2, y: game.center.y },
-      size: { x: game.boundary_thickness, y: game.size.y }
-    };
+    this.topbound = new Bound(
+      { x: game.center.x, y: game.boundary_thickness / 2 },
+      { x: game.size.x, y: game.boundary_thickness }
+    );
+    this.bottombound = new Bound(
+      { x: game.center.x, y: game.size.y - game.boundary_thickness / 2 },
+      { x: game.size.x, y: game.boundary_thickness }
+    );
+    this.leftbound = new Bound(
+      { x: game.boundary_thickness / 2, y: game.center.y },
+      { x: game.boundary_thickness, y: game.size.y }
+    );
+    this.rightbound = new Bound(
+      { x: game.size.x - game.boundary_thickness / 2, y: game.center.y },
+      { x: game.boundary_thickness, y: game.size.y }
+    );
     // this.bounds = [
     //   [0, 0, game.size.x, game.boundary_thickness],
     //   [0, game.size.y - game.boundary_thickness, game.size.x, game.boundary_thickness],
@@ -87,28 +116,51 @@
   };
 
   Boundary.prototype = {
-    draw: function(screen) {
+    draw: function() {
       //for (i = 0; i < this.bounds.length; i++) {
-        screen.fillStyle = this.color;
+        this.screen.fillStyle = this.color;
         // screen.fillRect.apply(screen, this.bounds[i]);
-        drawRect(screen, this.topbound);
-        drawRect(screen, this.bottombound)
-        drawRect(screen, this.leftbound)
-        drawRect(screen, this.rightbound)
+        drawRect(this.screen, this.topbound);
+        drawRect(this.screen, this.bottombound)
+        drawRect(this.screen, this.leftbound)
+        drawRect(this.screen, this.rightbound)
       //}
     }
   };
 
   // ========
-  // Sprites
+  // Snake classes
   // ========
+
+  var Snake = function(head) {
+    this.head = head;
+    this.tail = [];
+    this.alive = true;
+  };
+
+  Snake.prototype = {
+    update: function() {
+      this.head.update();
+      // for (i = 0; i < this.tail.length; i++) {
+      //   this.tail[i].update();
+      // };
+    },
+
+    die: function() {
+      this.head.die();
+      // for (i = 0; i < this.tail.length; i++) {
+      //   this.tail.splice(i, 1);
+      // };
+      this.boundary.color = 'red';
+    }
+  };
 
   var Head = function(game) {
     this.game = game;
     this.size = { x: 10, y: 10 };
     this.center = { x: this.game.center.x, y: game.center.y };
     this.direction = [0, 0];
-    this.speed = 2;
+    this.speed = 10;
     this.color = "black";
     this.keyboarder = new Keyboarder();
   };
@@ -135,8 +187,37 @@
       drawRect(screen, this);
     },
 
+    collision: function(collided_with) {
+      if (collided_with instanceof Bound) {
+        this.game.killSnake();
+      }
+    }
+  };
+
+  var Food = function(game) {
+    this.game = game;
+    this.size = { x: 10, y: 10 };
+    this.center = {
+      x: (this.game.boundary_thickness / 2) + (Math.random() * (this.game.size.x - this.game.boundary_thickness)),
+      y: (this.game.boundary_thickness / 2) + (Math.random() * (this.game.size.y - this.game.boundary_thickness))
+    };
+    this.color = "green";
+  };
+
+  Food.prototype = {
+    draw: function(screen) {
+      drawRect(screen, this);
+    },
+
     collision: function() {
-      this.game.removeSprite(this);
+      this.regenFood();
+    },
+
+    regenFood: function() {
+      this.center = {
+        x: (this.game.boundary_thickness / 2) + (Math.random() * (this.game.size.x - this.game.boundary_thickness)),
+        y: (this.game.boundary_thickness / 2) + (Math.random() * (this.game.size.y - this.game.boundary_thickness))
+      };
     }
   };
 
@@ -154,14 +235,15 @@
     );
   };
 
-  var reportCollisions = function(sprites, boundary) {
-    var boundaries = [boundary.topbound, boundary.bottombound, boundary.leftbound, boundary.rightbound];
-    var collidables = sprites.concat(boundaries);
+  var reportCollisions = function(collide_group_a, collide_group_b) {
+
+    // var boundaries = [boundary.topbound, boundary.bottombound, boundary.leftbound, boundary.rightbound];
+    // var collidables = sprites.concat(boundaries);
     var collidingPairs = [];
-    for (var i = 0; i < collidables.length; i++) {
-      for (var j = i + 1; j < collidables.length; j++) {
-        if (isColliding(collidables[i], collidables[j])) {
-          collidingPairs.push([collidables[i], collidables[j]]);
+    for (var i = 0; i < collide_group_a.length; i++) {
+      for (var j = 0; j < collide_group_b.length; j++) {
+        if (isColliding(collide_group_a[i], collide_group_b[j])) {
+          collidingPairs.push([collide_group_a[i], collide_group_b[j]]);
         }
       }
     }
