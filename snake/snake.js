@@ -12,6 +12,7 @@
     screen.textAlign = "center";
     this.size = { x: screen.canvas.width, y: screen.canvas.height };
     this.center = { x: this.size.x / 2, y: this.size.y / 2 };
+    this.eatSound = document.getElementById('eat-sound');
 
     this.grid_size = 10;
     this.keyboarder = new Keyboarder();
@@ -147,6 +148,10 @@
 
     addTailBlock: function() {
       this.blocks.push(new TailBlock({ x: this.blocks[this.blocks.length - 1].center.x, y: this.blocks[this.blocks.length - 1].center.y }));
+
+      // Play sound
+      this.game.eatSound.load();
+      this.game.eatSound.play();
 
       // Increase game speed as snake grows
       if (this.game.redraw_freq > 70) {
