@@ -68,8 +68,8 @@
       } else {
       this.boundary.color = 'red';
       this.boundary.draw();
-      screen.fillText("Game Over", this.center.x, this.center.y)
-      screen.fillText("(refresh page to restart)", this.center.x, this.center.y + 40)
+      screen.fillText("Game Over", this.center.x, this.center.y - 20)
+      screen.fillText("(refresh page to restart)", this.center.x, this.center.y + 20)
       }
     },
 
