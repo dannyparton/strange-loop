@@ -24,25 +24,22 @@
     this.food = new Food(this);
 
     var self = this;
-    self.highrestimestamp = 0;
+    self.anim_timestamp = 0;
     self.redraw_freq = 160;
     var tick = function(timestamp) {
       self.keyboarder.update_key_logs();
 
-      if (timestamp === undefined) {
+      if (timestamp - self.anim_timestamp > self.redraw_freq) {
         self.update();
         self.draw(screen);
-      } else if (timestamp - self.highrestimestamp > self.redraw_freq) {
-        self.update();
-        self.draw(screen);
-        self.highrestimestamp = timestamp;
+        self.anim_timestamp = timestamp;
         self.keyboarder.reset_key_logs();
       };
 
       requestAnimationFrame(tick);
     };
 
-    tick();
+    tick(0);
   };
 
   Game.prototype = {
@@ -129,25 +126,19 @@
   var Snake = function(game, head) {
     this.game = game;
     this.blocks = [head];
-    this.prev_positions = [{ x: this.blocks[0].center.x, y: this.blocks[0].center.y}];
     this.alive = true;
   };
 
   Snake.prototype = {
     update: function() {
+      for (i = this.blocks.length-1; i > 0; i--) {
+        this.blocks[i].update(this.blocks[i-1]);
+      };
       this.blocks[0].update();
-
-      for (i = 1; i < this.blocks.length; i++) {
-        this.blocks[i].update(this.prev_positions[i-1]);
-      };
-
-      for (i = 0; i < this.blocks.length; i++) {
-        this.prev_positions[i] = { x: this.blocks[i].center.x, y: this.blocks[i].center.y};
-      };
     },
 
     addTailBlock: function() {
-      this.blocks.push(new TailBlock({ x: this.blocks[this.blocks.length - 1].center.x, y: this.blocks[this.blocks.length - 1].center.y }));
+      this.blocks.push(new TailBlock(this.blocks[this.blocks.length - 1]));
 
       // Play sound
       this.game.eatSound.load();
@@ -204,9 +195,9 @@
 
   // TailBlock
 
-  var TailBlock = function(center) {
+  var TailBlock = function(block_obj) {
     this.size = { x: 10, y: 10 };
-    this.center = center;
+    this.center = { x: block_obj.center.x, y: block_obj.center.y };
   };
 
   TailBlock.prototype = {
@@ -214,8 +205,8 @@
       drawRect(screen, this);
     },
 
-    update: function(center) {
-      this.center = center;
+    update: function(block_obj) {
+      this.center = { x: block_obj.center.x, y: block_obj.center.y };
     }
   };
 
