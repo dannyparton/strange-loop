@@ -25,11 +25,11 @@
 
     var self = this;
     self.anim_timestamp = 0;
-    self.redraw_freq = 160;
+    self.redraw_timespan = 160;
     var tick = function(timestamp) {
       self.keyboarder.update_key_logs();
 
-      if (timestamp - self.anim_timestamp > self.redraw_freq) {
+      if (timestamp - self.anim_timestamp > self.redraw_timespan) {
         self.update();
         self.draw(screen);
         self.anim_timestamp = timestamp;
@@ -145,8 +145,8 @@
       this.game.eatSound.play();
 
       // Increase game speed as snake grows
-      if (this.game.redraw_freq > 70) {
-        this.game.redraw_freq = 160 * Math.pow(0.988, this.blocks.length - 1);
+      if (this.game.redraw_timespan > 70) {
+        this.game.redraw_timespan = 160 * Math.pow(0.988, this.blocks.length - 1);
       }
     }
   };
